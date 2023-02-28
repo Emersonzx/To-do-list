@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect} from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set } from 'firebase/database';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,6 +7,7 @@ interface Todo {
   id: string;
   text: string;
   completed: boolean;
+  userId: string; // add a userId property to each todo item
 }
 
 const firebaseConfig = {
@@ -26,50 +27,78 @@ const TodoList: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodoText, setNewTodoText] = useState('');
 
+  // generate a new user ID on component mount
   useEffect(() => {
-    const todosRef = ref(database, 'todos');
+    const storedUserId = localStorage.getItem('userId');
+    const userId = storedUserId ? storedUserId : uuidv4();
+    localStorage.setItem('userId', userId);
+  }, []);
 
-    // fetch data from the database and update the `todos` state accordingly
+  useEffect(() => {
+    const userId = localStorage.getItem('userId');
+    const todosRef = ref(database, `todos/${userId}`);
+    
     onValue(todosRef, (snapshot) => {
       const data = snapshot.val();
       const todoList = data ? Object.values<Todo>(data) : [];
-      setTodos(todoList);
+      if (todoList.length > 0) {
+        setTodos(todoList);
+      }
     });
-  }, [database]);
+  }, []);
 
-  const handleNewTodoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNewTodoTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewTodoText(event.target.value);
   };
 
-  const handleNewTodoSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddTodo = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const newTodo: Todo = {
-      id: uuidv4(), // generate a unique ID for the new todo item
-      text: newTodoText.trim(),
-      completed: false,
-    };
-    set(ref(database, `todos/${newTodo.id}`), newTodo);
-    setNewTodoText('');
-  };
-
-  const handleTodoToggle = (todoId: string) => {
-    const todoRef = ref(database, `todos/${todoId}`);
-    const todo = todos.find((t) => t.id === todoId);
-    if (todo) {
-      set(todoRef, { ...todo, completed: !todo.completed });
+    if (!newTodoText) {
+      return;
     }
+
+    const userId = localStorage.getItem('userId'); // retrieve the user ID from localStorage
+    const newTodo: Todo = {
+      id: uuidv4(), // generate a new ID for the new todo item
+      text: newTodoText,
+      completed: false,
+      userId: userId !== null ? userId : ''
+    };
+    setTodos((prevTodos) => [...prevTodos, newTodo]);
+    setNewTodoText('');
+
+    const todosRef = ref(database, `todos/${userId}`);
+    set(todosRef, [...todos, newTodo]); // update the user's todo list in the database
   };
 
-  const handleTodoDelete = (todoId: string) => {
-    const todoRef = ref(database, `todos/${todoId}`);
-    set(todoRef, null);
+  const handleToggleTodoCompleted = (id: string) => {
+    const userId = localStorage.getItem('userId'); // retrieve the user ID from localStorage
+    const updatedTodos = todos.map((todo) => {
+      if (todo.id === id) {
+        return { ...todo, completed: !todo.completed };
+      }
+      return todo;
+    });
+    setTodos(updatedTodos);
+
+    const todosRef = ref(database, `todos/${userId}`);
+    set(todosRef, updatedTodos); // update the user's todo list in the database
+  };
+
+  const handleRemoveTodo = (id: string) => {
+    const userId = localStorage.getItem('userId'); // retrieve the user ID from localStorage
+    const filteredTodos = todos.filter((todo) => todo.id !== id);
+    setTodos(filteredTodos);
+
+    const todosRef = ref(database, `todos/${userId}`);
+    set(todosRef, filteredTodos); // update the user's todo list in the database
   };
   return (
     <div className="todo-list">
       <h1>Lista de tarefas</h1>
       <p>Planeje sua rotina</p>
-      <form  onSubmit={handleNewTodoSubmit}>
-        <input className='input' type="text" value={newTodoText} onChange={handleNewTodoChange} />
+      <form onSubmit={handleAddTodo}>
+        <input className='input' type="text" value={newTodoText} onChange={handleNewTodoTextChange} />
         <button className='button' type="submit">Adicionar</button>
       </form>
       <ul>
@@ -78,12 +107,12 @@ const TodoList: React.FC = () => {
             <input className="checkbox"
               type="checkbox"
               checked={todo.completed}
-              onChange={() => handleTodoToggle(todo.id)}
+              onChange={() => handleToggleTodoCompleted(todo.id)}
             />
             <span className={`todo-text ${todo.completed ? 'completed' : ''}`}>
               {todo.text}
             </span>
-            <button className='button' onClick={() => handleTodoDelete(todo.id)}>Remover</button>
+            <button className='button' onClick={() => handleRemoveTodo(todo.id)}>Remover</button>
           </li>
         ))}
       </ul>
