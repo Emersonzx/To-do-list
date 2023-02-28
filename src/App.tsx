@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set } from 'firebase/database';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Todo {
   id: string;
@@ -27,12 +28,14 @@ const TodoList: React.FC = () => {
 
   useEffect(() => {
     const todosRef = ref(database, 'todos');
+
+    // fetch data from the database and update the `todos` state accordingly
     onValue(todosRef, (snapshot) => {
       const data = snapshot.val();
       const todoList = data ? Object.values<Todo>(data) : [];
       setTodos(todoList);
     });
-  }, []);
+  }, [database]);
 
   const handleNewTodoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewTodoText(event.target.value);
@@ -41,7 +44,7 @@ const TodoList: React.FC = () => {
   const handleNewTodoSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const newTodo: Todo = {
-      id: new Date().getTime().toString(),
+      id: uuidv4(), // generate a unique ID for the new todo item
       text: newTodoText.trim(),
       completed: false,
     };
@@ -61,7 +64,6 @@ const TodoList: React.FC = () => {
     const todoRef = ref(database, `todos/${todoId}`);
     set(todoRef, null);
   };
-
   return (
     <div className="todo-list">
       <h1>Lista de tarefas</h1>
