@@ -7,7 +7,7 @@ interface Todo {
   id: string;
   text: string;
   completed: boolean;
-  userId: string; // add a userId property to each todo item
+  userId: string; 
 }
 
 const firebaseConfig = {
@@ -27,7 +27,7 @@ const TodoList: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodoText, setNewTodoText] = useState('');
 
-  // generate a new user ID on component mount
+  
   useEffect(() => {
     const storedUserId = localStorage.getItem('userId');
     const userId = storedUserId ? storedUserId : uuidv4();
@@ -57,9 +57,9 @@ const TodoList: React.FC = () => {
       return;
     }
 
-    const userId = localStorage.getItem('userId'); // retrieve the user ID from localStorage
+    const userId = localStorage.getItem('userId'); 
     const newTodo: Todo = {
-      id: uuidv4(), // generate a new ID for the new todo item
+      id: uuidv4(), 
       text: newTodoText,
       completed: false,
       userId: userId !== null ? userId : ''
@@ -68,11 +68,11 @@ const TodoList: React.FC = () => {
     setNewTodoText('');
 
     const todosRef = ref(database, `todos/${userId}`);
-    set(todosRef, [...todos, newTodo]); // update the user's todo list in the database
+    set(todosRef, [...todos, newTodo]); 
   };
 
   const handleToggleTodoCompleted = (id: string) => {
-    const userId = localStorage.getItem('userId'); // retrieve the user ID from localStorage
+    const userId = localStorage.getItem('userId'); 
     const updatedTodos = todos.map((todo) => {
       if (todo.id === id) {
         return { ...todo, completed: !todo.completed };
@@ -82,16 +82,16 @@ const TodoList: React.FC = () => {
     setTodos(updatedTodos);
 
     const todosRef = ref(database, `todos/${userId}`);
-    set(todosRef, updatedTodos); // update the user's todo list in the database
+    set(todosRef, updatedTodos); 
   };
 
   const handleRemoveTodo = (id: string) => {
-    const userId = localStorage.getItem('userId'); // retrieve the user ID from localStorage
+    const userId = localStorage.getItem('userId'); 
     const filteredTodos = todos.filter((todo) => todo.id !== id);
-    setTodos(filteredTodos);
+    setTodos(filteredTodos);  
 
     const todosRef = ref(database, `todos/${userId}`);
-    set(todosRef, filteredTodos); // update the user's todo list in the database
+    set(todosRef, filteredTodos); 
   };
   return (
     <div className="todo-list">
